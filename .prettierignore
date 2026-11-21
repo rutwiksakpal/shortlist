@@ -1,0 +1,6 @@
+dist
+coverage
+public/pdfjs
+playwright-report
+test-results
+package-lock.json

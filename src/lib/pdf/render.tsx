@@ -3,6 +3,8 @@ import type { ResolvedResume } from '../resolve';
 import type { Layout } from '../schema';
 import { AUTO_FIT_STEPS } from './layout';
 import { ResumeDocument } from './ResumeDocument';
+import { CoverLetterDocument } from './CoverLetterDocument';
+import type { ResolvedCoverLetter } from '../coverLetter';
 
 export async function renderResumePdf(resume: ResolvedResume, layout: Layout): Promise<Blob> {
   return pdf(<ResumeDocument resume={resume} layout={layout} />).toBlob();
@@ -46,4 +48,8 @@ export async function autoFit(base: Layout, countPages: (layout: Layout) => Prom
 export async function pageCountFor(resume: ResolvedResume, layout: Layout): Promise<number> {
   const blob = await renderResumePdf(resume, layout);
   return countPdfPages(new Uint8Array(await blob.arrayBuffer()));
+}
+
+export async function renderCoverLetterPdf(letter: ResolvedCoverLetter, layout: Layout): Promise<Blob> {
+  return pdf(<CoverLetterDocument letter={letter} layout={layout} />).toBlob();
 }

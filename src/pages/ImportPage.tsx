@@ -244,6 +244,11 @@ function ReviewStep({ initial, source, onBack }: { initial: ImportDraft; source:
       Object.assign(p, profile);
       variants.push(variant);
     });
+    store.markOnboarded();
+    if (!store.onboarded) {
+      // A first-time visitor starts from the empty placeholder resume; keep only the imported one.
+      useStore.setState((st) => ({ variants: st.variants.filter((v) => v.id === variant.id) }));
+    }
     toast('Resume imported');
     navigate(paths.editor(variant.id));
   };

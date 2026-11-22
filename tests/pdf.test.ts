@@ -1,14 +1,15 @@
 // @vitest-environment node
+import { fixtureProfile } from './fixtures';
 import { describe, expect, it } from 'vitest';
 import { resolveResume } from '../src/lib/resolve';
-import { createVariant, DEFAULT_LAYOUT, emptyProfile, seedProfile } from '../src/lib/seed';
+import { createVariant, DEFAULT_LAYOUT, emptyProfile, sampleProfile } from '../src/lib/seed';
 import { countPdfPages } from '../src/lib/pdf/render';
 import { verifyTextLayer } from '../src/lib/pdf/verify';
 import type { Profile } from '../src/lib/schema';
 import { extractNode, renderNode } from './helpers';
 
 function fullProfile(): Profile {
-  const p = seedProfile();
+  const p = fixtureProfile();
   p.personal.linkedin = 'linkedin.com/in/example';
   p.summary = 'Web developer building fast Shopify and React sites with a focus on Core Web Vitals.';
   p.experience = [
@@ -55,7 +56,7 @@ describe('PDF export', () => {
     expect(ex.imageCount).toBe(0);
     expect(countPdfPages(bytes)).toBe(ex.pages);
     const text = ex.lines.join('\n');
-    expect(text).toContain('work@codewithrutwik.space | +91 9637782385 | codewithrutwik.space');
+    expect(text).toContain('work@example.dev | +91 90000 12345 | example.dev');
     expect(text).toContain('Jan 2023 - Present');
     expect(text).toContain('Improved LCP from 4.1s to 1.9s - using "lazy" loading -> INR savings');
     expect(text).not.toMatch(/🚀|�/);
@@ -71,9 +72,19 @@ describe('PDF export', () => {
     const v = createVariant(p, { name: 'X', preset: 'custom', headline: '' });
     const r = resolveResume(p, v);
     const ex = await extractNode(await renderNode(r, DEFAULT_LAYOUT));
-    expect(ex.lines).toEqual(['Asha Rao', 'asha@example.com', 'EXPERIENCE', 'Developer']);
+    expect(ex.lines).toEqual(['Asha Rao', 'asha@example.com', 'Experience', 'Developer']);
     const text = ex.lines.join('\n');
-    for (const bad of ['SKILLS', 'PROJECTS', 'SUMMARY', 'EDUCATION', 'N/A', '|', '•']) expect(text).not.toContain(bad);
+    for (const bad of ['Skills', 'Projects', 'Summary', 'Education', 'N/A', '|', '•']) expect(text).not.toContain(bad);
+  });
+
+  it.each(['simple', 'classic', 'centered', 'serif'] as const)('template %s renders verifiable text', async (template) => {
+    const p = fullProfile();
+    const v = createVariant(p, { name: 'Web Developer', preset: 'web' });
+    const r = resolveResume(p, v);
+    const ex = await extractNode(await renderNode(r, { ...DEFAULT_LAYOUT, template }));
+    expect(verifyTextLayer(ex, r).checks.filter((c) => !c.pass)).toEqual([]);
+    const text = ex.lines.join('\n');
+    expect(text).toContain(template === 'classic' || template === 'centered' ? 'EXPERIENCE' : 'Experience');
   });
 
   it('page size toggles between A4 and US Letter', async () => {
@@ -85,5 +96,16 @@ describe('PDF export', () => {
     const dec = new TextDecoder('latin1');
     expect(dec.decode(a4)).toMatch(/MediaBox \[0 0 595\.2\d* 841\.8\d*\]/);
     expect(dec.decode(letter)).toMatch(/MediaBox \[0 0 612 792\]/);
+  });
+});
+
+describe('hyphenation', () => {
+  it('never splits URLs or words across lines', async () => {
+    const p = sampleProfile();
+    const v = createVariant(p, { name: 'X', preset: 'custom' });
+    const ex = await extractNode(await renderNode(resolveResume(p, v), { ...DEFAULT_LAYOUT, template: 'centered' }));
+    expect(ex.lines.some((l) => l.includes('github.com/alexmorgan-sample'))).toBe(true);
+    const broken = ex.lines.filter((l, i) => /[a-z]-$/.test(l) && /^[a-z]/.test(ex.lines[i + 1] ?? ''));
+    expect(broken).toEqual([]);
   });
 });

@@ -1,11 +1,12 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { lastExportedAt, markExported, requestPersistentStorage, usePwa } from '../lib/pwa';
 import { listCorruptBackups, makeBackup, parseBackup, readRaw, removeKey, STORAGE_KEYS } from '../lib/storage';
 import { seedWorkspace } from '../lib/seed';
 import { downloadBlob, todayIsoDate } from '../lib/utils';
 import { useStore } from '../store/useStore';
 import { useTheme } from '../store/theme';
 import { confirmAction, toast } from '../store/ui';
-import { DownloadIcon, MonitorIcon, MoonIcon, SunIcon, UploadIcon } from '../components/icons';
+import { AlertIcon, CheckIcon, DownloadIcon, MonitorIcon, MoonIcon, SunIcon, UploadIcon } from '../components/icons';
 import { Button, Card, Notice, SegmentedControl } from '../components/ui';
 
 function usageKb(): number {
@@ -28,11 +29,21 @@ export function SettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [corrupt, setCorrupt] = useState(listCorruptBackups);
+  const [lastExport, setLastExport] = useState(lastExportedAt);
+  const persisted = usePwa((s) => s.persisted);
+  const installEvent = usePwa((s) => s.installEvent);
+  const installed = usePwa((s) => s.installed);
+  const install = usePwa((s) => s.install);
+  useEffect(() => {
+    void requestPersistentStorage();
+  }, []);
 
   const exportAll = () => {
     const s = useStore.getState();
     const backup = makeBackup(s.workspace(), s.snapshots);
     downloadBlob(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }), `shortlist-backup-${todayIsoDate()}.json`);
+    markExported();
+    setLastExport(lastExportedAt());
     toast('Backup downloaded');
   };
 
@@ -64,8 +75,10 @@ export function SettingsPage() {
     });
     if (!ok) return;
     useStore.getState().takeSnapshot('Before reset');
-    replaceWorkspace(seedWorkspace());
+    replaceWorkspace({ ...seedWorkspace() });
+    useStore.setState({ onboarded: false });
     toast('Data reset');
+    window.location.hash = '#/';
   };
 
   return (
@@ -133,7 +146,49 @@ export function SettingsPage() {
             Import backup
           </Button>
         </div>
+        <p className="text-xs text-slate-500">
+          {lastExport ? `Last backup: ${lastExport.toLocaleString()}` : 'No backup downloaded from this browser yet.'}
+        </p>
         {error ? <Notice tone="error">{error}</Notice> : null}
+      </Card>
+
+      <Card className="space-y-3 p-4">
+        <h2 className="font-semibold">Reliability</h2>
+        <ul className="space-y-2 text-sm">
+          <li className="flex items-start gap-2">
+            {persisted ? (
+              <CheckIcon size={16} className="mt-0.5 text-emerald-600" />
+            ) : (
+              <AlertIcon size={16} className="mt-0.5 text-amber-600" />
+            )}
+            <span>
+              {persisted
+                ? 'Protected storage is on. The browser will not clear your data to free up space.'
+                : persisted === false
+                  ? 'The browser has not granted protected storage. Installing the app or bookmarking it usually helps. Keep regular backups.'
+                  : 'Checking storage protection...'}
+            </span>
+          </li>
+          <li className="flex items-start gap-2">
+            <CheckIcon size={16} className="mt-0.5 text-emerald-600" />
+            <span>Works offline after the first visit. Changes save automatically as you type.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <CheckIcon size={16} className="mt-0.5 text-emerald-600" />
+            <span>If you open Shortlist in two tabs, the older tab pauses saving so nothing is overwritten.</span>
+          </li>
+        </ul>
+        {installed ? (
+          <p className="text-sm text-slate-600 dark:text-slate-300">Shortlist is installed as an app on this device.</p>
+        ) : installEvent ? (
+          <Button variant="primary" onClick={() => void install()}>
+            Install Shortlist as an app
+          </Button>
+        ) : (
+          <p className="text-xs text-slate-500">
+            To install: in Chrome or Edge use the install icon in the address bar; on iPhone use Share, then Add to Home Screen.
+          </p>
+        )}
       </Card>
 
       {corrupt.length ? (

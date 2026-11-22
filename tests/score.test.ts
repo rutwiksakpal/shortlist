@@ -1,16 +1,17 @@
+import { fixtureProfile } from './fixtures';
 import { describe, expect, it } from 'vitest';
 import { analyzeBullet, startsWithActionVerb } from '../src/lib/bullets';
 import { analyzeJobDescription } from '../src/lib/jd';
 import { countTerm, customTerm, extractTerms, findTerm } from '../src/lib/keywords';
 import { resolveResume } from '../src/lib/resolve';
 import { scoreResume, SCORE_NOTE } from '../src/lib/score';
-import { createVariant, seedProfile } from '../src/lib/seed';
+import { createVariant } from '../src/lib/seed';
 import type { VerifyResult } from '../src/lib/pdf/verify';
 
 const verified: VerifyResult = { pass: true, pages: 1, checks: [{ id: 'images', label: 'No images', pass: true }] };
 
 function strong() {
-  const p = seedProfile();
+  const p = fixtureProfile();
   p.personal.linkedin = 'linkedin.com/in/rutwik';
   p.summary =
     'Web developer building fast Shopify, WordPress and React sites with strong technical SEO and Core Web Vitals focus for growing brands.';
@@ -95,7 +96,7 @@ describe('score engine', () => {
   });
 
   it('scores an empty-ish resume low and lists fixes', () => {
-    const p = seedProfile();
+    const p = fixtureProfile();
     const v = createVariant(p, { name: 'Web', preset: 'web' });
     const s = scoreResume({ profile: p, variant: v, resume: resolveResume(p, v), pages: 1, verify: verified });
     expect(s.total).toBeLessThan(60);
@@ -131,7 +132,7 @@ describe('score engine', () => {
   });
 
   it('suggests spelling out terms implied by MERN', () => {
-    const p = seedProfile();
+    const p = fixtureProfile();
     const v = createVariant(p, { name: 'SW', preset: 'software' });
     const s = scoreResume({ profile: p, variant: v, resume: resolveResume(p, v) });
     expect(s.keywords.missing.find((m) => m.term === 'React')?.impliedBy).toBe('MERN');

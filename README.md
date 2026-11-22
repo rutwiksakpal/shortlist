@@ -1,8 +1,18 @@
 # Shortlist - ATS Resume Studio
 
-A personal, browser-only resume builder. Keep one master profile, create role-targeted resumes, score them for ATS compatibility (optionally against a pasted job description), and download a clean, text-based PDF.
+A browser-only resume builder anyone can use. Keep one master profile, create role-targeted resumes in four ATS-safe templates, score them against a job description, write a matching cover letter, and download clean, text-based PDFs.
 
-No backend, no login, no external API calls. All data stays in your browser's localStorage.
+No backend, no login, no external API calls. Each visitor's data stays in their own browser, and the app works offline once loaded.
+
+## Features
+
+- **First-run onboarding.** New visitors see a landing page, then a 3-step setup. They can also import an existing resume or explore fictional sample data (Alex Morgan).
+- **Templates:** Simple, Classic, Centered and Serif. All are single column with real text and standard fonts.
+- **ATS score** (0-100) with fixes, keyword match against a job description, and keyword-stuffing detection.
+- **Cover letter builder** for each resume. It can insert a starter draft built only from your confirmed details, warns about unfilled [brackets] and length, and produces a verified one-page PDF.
+- **Editor:** section navigator, profile-strength checklist, drag-to-reorder, show/hide per resume, undo/redo, version history.
+- **Reliability:** offline service worker, installable app, persistent-storage request, backup reminders, and protection against two open tabs overwriting each other.
+- **Applications log** with status tracking and response rate.
 
 ## Run, build, test
 
@@ -48,27 +58,32 @@ The live preview is the **real PDF** rendered by pdf.js, so the preview, page co
 
 ## Manual acceptance checklist
 
-1. Open the app. The dashboard shows **Web Developer** and **Software Developer** with the seed data. Experience, projects and education are empty.
-2. Open **Web Developer**. The preview shows name, headline, contact line and Skills only. There are no empty headings, no "N/A" and no stray `|`.
-3. Add an experience with one bullet "Responsible for website". Bullet hints warn about a weak opener, a missing metric and short length. Nothing is rewritten for you.
-4. Set the end date before the start date. An error appears. Tick "I currently work here" and the preview shows `Mon YYYY - Present`.
-5. Hide that experience with the eye button. It disappears from the preview, and the Software Developer resume is unaffected.
-6. Drag sections in **Section order and visibility** (mouse, or keyboard: Tab to a handle, Space, arrow keys, Space). The preview order follows.
-7. Press Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z. Undo and redo work. The header shows "Saved".
-8. **Page and layout**: switch to US Letter, then click **Auto-fit**. It reports the page count and the settings it chose.
-9. **ATS score** tab: score out of 100 with 7 categories, fixes, matched and missing keywords, and the note "This is an estimate; real ATS systems vary."
-10. Paste a job description into **Target role**. Keyword match now uses it, and the analysis shows the job title, years asked, hard skills and tools.
-11. Write "Shopify" 8 times in the summary. The keyword stuffing warning appears and the score drops.
-12. **ATS text view** shows the extracted text in reading order.
-13. **Review and download**: the checklist and text-layer check show PASS. If there are warnings, the Download button needs the confirm tick. The file downloads as `Rutwik_Sakpal_Web_Developer_Resume.pdf`. Open it and select text to confirm it is real text. Document properties show Title "Rutwik Sakpal - Web Developer" and Author "Rutwik Sakpal".
-14. After downloading, click **Log application**. It appears under **Applications**, where you can change its status.
-15. Dashboard: **Tailor for job** creates a copy with the job description. Duplicate, rename, delete, search and tag filters all work.
-16. **Import**: paste a resume that contains "Date of Birth: ..." and a street address. The review screen lists them as removed. Unknown lines (e.g. Hobbies) are listed for you to assign. **Create resume** opens the editor.
-17. **Version history**: click **Save version now**, make a change, then **Restore**.
-18. **Settings**: export JSON, change something, then import the JSON to get your data back. Toggle dark mode.
-19. Resize to phone width. The editor shows Edit, Preview, Score and ATS text tabs.
+0. In a fresh browser window, the landing page appears. Click **Build my resume**, complete the 3 steps, and the editor opens. (Or click **Explore with sample data**: the dashboard shows a sample notice with a **Start with my own details** button.)
+1. Open the **Template** panel and switch between Simple, Classic, Centered and Serif. The preview updates. Long links never break across lines.
+2. Open the **Cover letter** button. Fill in the company, click **Insert starter draft**, and replace the [bracketed] parts. Warnings clear and **Download cover letter** produces `Name_Company_Cover_Letter.pdf`.
+3. Open your resume. The preview shows name, headline, contact line and Skills only. There are no empty headings, no "N/A" and no stray `|`.
+4. Add an experience with one bullet "Responsible for website". Bullet hints warn about a weak opener, a missing metric and short length. Nothing is rewritten for you.
+5. Set the end date before the start date. An error appears. Tick "I currently work here" and the preview shows `Mon YYYY - Present`.
+6. Hide that experience with the eye button. It disappears from the preview, and the Software Developer resume is unaffected.
+7. Drag sections in **Section order and visibility** (mouse, or keyboard: Tab to a handle, Space, arrow keys, Space). The preview order follows.
+8. Press Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z. Undo and redo work. The header shows "Saved".
+9. **Page and layout**: switch to US Letter, then click **Auto-fit**. It reports the page count and the settings it chose.
+10. **ATS score** tab: score out of 100 with 7 categories, fixes, matched and missing keywords, and the note "This is an estimate; real ATS systems vary."
+11. Paste a job description into **Target role**. Keyword match now uses it, and the analysis shows the job title, years asked, hard skills and tools.
+12. Write "Shopify" 8 times in the summary. The keyword stuffing warning appears and the score drops.
+13. **ATS text view** shows the extracted text in reading order.
+14. **Review and download**: the checklist and text-layer check show PASS. If there are warnings, the Download button needs the confirm tick. The file downloads as `Rutwik_Sakpal_Web_Developer_Resume.pdf`. Open it and select text to confirm it is real text. Document properties show Title "Rutwik Sakpal - Web Developer" and Author "Rutwik Sakpal".
+15. After downloading, click **Log application**. It appears under **Applications**, where you can change its status.
+16. Dashboard: **Tailor for job** creates a copy with the job description. Duplicate, rename, delete, search and tag filters all work.
+17. **Import**: paste a resume that contains "Date of Birth: ..." and a street address. The review screen lists them as removed. Unknown lines (e.g. Hobbies) are listed for you to assign. **Create resume** opens the editor.
+18. **Version history**: click **Save version now**, make a change, then **Restore**.
+19. **Settings**: export JSON, change something, then import the JSON to get your data back. Toggle dark mode.
+20. Resize to phone width. The editor shows Edit, Preview, Score and ATS text tabs.
 
 ## Limitations (honest)
+
+- **Each device is separate.** Data does not sync between your laptop and phone. Move it with Settings → Export JSON / Import backup.
+- **Offline mode** works after the first visit, in the same browser.
 
 - **Data lives in one browser.** Clearing site data, private windows or switching devices means starting empty. Export a JSON backup regularly.
 - **The ATS score is an estimate.** It is a local, rule-based heuristic. Real ATS products parse and rank differently.

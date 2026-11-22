@@ -1,7 +1,7 @@
+import { fixtureProfile } from './fixtures';
 import { describe, expect, it } from 'vitest';
 import { mapJsonResume } from '../src/lib/import/jsonResume';
 import { applyImport, assignUnmapped } from '../src/lib/import/apply';
-import { seedProfile } from '../src/lib/seed';
 import { resolveResume } from '../src/lib/resolve';
 
 describe('JSON Resume import', () => {
@@ -28,7 +28,7 @@ describe('JSON Resume import', () => {
   });
 
   it('applies an import as a new variant showing only imported content', () => {
-    const master = seedProfile();
+    const master = fixtureProfile();
     const d = mapJsonResume({
       basics: { name: 'Other' },
       work: [{ name: 'Co', position: 'Dev', highlights: ['Did x'] }],

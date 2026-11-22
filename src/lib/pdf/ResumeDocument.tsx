@@ -1,8 +1,10 @@
+import './fonts';
 import { Document, Link, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import { Fragment, type ReactNode } from 'react';
 import { joinFilled, type ContactItem, type ResolvedResume, type ResolvedSection } from '../resolve';
 import type { Layout } from '../schema';
 import { metricsFor, type Metrics } from './layout';
+import { TEMPLATES, type TemplateStyle } from './templates';
 
 /**
  * ATS-safe resume document.
@@ -12,10 +14,10 @@ import { metricsFor, type Metrics } from './layout';
  * - Everything rendered comes from a ResolvedResume, which already omits empty content.
  */
 
-const BOLD = 'Helvetica-Bold';
-const REGULAR = 'Helvetica';
-
-function makeStyles(m: Metrics) {
+function makeStyles(m: Metrics, t: TemplateStyle) {
+  const REGULAR = t.regular;
+  const BOLD = t.bold;
+  const align = t.headerAlign;
   return StyleSheet.create({
     page: {
       paddingTop: m.pagePadding,
@@ -27,11 +29,11 @@ function makeStyles(m: Metrics) {
       color: '#000000',
       backgroundColor: '#FFFFFF',
     },
-    name: { fontFamily: BOLD, fontSize: m.name, lineHeight: 1.15 },
-    headline: { fontSize: m.headline, marginTop: 2 },
-    contact: { marginTop: 3 },
+    name: { fontFamily: BOLD, fontSize: t.nameSize, lineHeight: 1.15, textAlign: align },
+    headline: { fontSize: m.headline, marginTop: 2, textAlign: align },
+    contact: { marginTop: 3, textAlign: align },
     section: { marginTop: m.sectionGap },
-    heading: { fontFamily: BOLD, fontSize: m.heading, marginBottom: m.headingGap, lineHeight: 1.2 },
+    heading: { fontFamily: BOLD, fontSize: m.heading, marginBottom: m.headingGap, lineHeight: 1.2, letterSpacing: t.headingLetterSpacing },
     entry: { marginTop: m.entryGap },
     firstEntry: { marginTop: 0 },
     bold: { fontFamily: BOLD },
@@ -129,8 +131,8 @@ function Entry({
   );
 }
 
-function SectionView({ section, st }: { section: ResolvedSection; st: Styles }) {
-  const heading = <Text style={st.heading}>{section.title.toUpperCase()}</Text>;
+function SectionView({ section, st, upper }: { section: ResolvedSection; st: Styles; upper: boolean }) {
+  const heading = <Text style={st.heading}>{upper ? section.title.toUpperCase() : section.title}</Text>;
   switch (section.key) {
     case 'summary':
       return (
@@ -262,7 +264,8 @@ function SectionView({ section, st }: { section: ResolvedSection; st: Styles }) 
 }
 
 export function ResumeDocument({ resume, layout }: { resume: ResolvedResume; layout: Layout }) {
-  const st = makeStyles(metricsFor(layout));
+  const template = TEMPLATES[layout.template] ?? TEMPLATES.simple;
+  const st = makeStyles(metricsFor(layout), template);
   return (
     <Document
       title={resume.meta.title}
@@ -280,7 +283,7 @@ export function ResumeDocument({ resume, layout }: { resume: ResolvedResume; lay
           {resume.contact.length ? <Contact items={resume.contact} st={st} /> : null}
         </View>
         {resume.sections.map((section) => (
-          <SectionView key={section.key} section={section} st={st} />
+          <SectionView key={section.key} section={section} st={st} upper={template.uppercaseHeadings} />
         ))}
       </Page>
     </Document>

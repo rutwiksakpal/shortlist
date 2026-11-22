@@ -4,6 +4,9 @@ export type Route =
   | { name: 'dashboard' }
   | { name: 'editor'; id: string }
   | { name: 'review'; id: string }
+  | { name: 'cover'; id: string }
+  | { name: 'welcome' }
+  | { name: 'start' }
   | { name: 'import' }
   | { name: 'applications' }
   | { name: 'settings' }
@@ -16,8 +19,11 @@ export function parseHash(hash: string): Route {
   if (parts[0] === 'resume' && parts[1]) {
     if (parts.length === 2) return { name: 'editor', id: parts[1] };
     if (parts.length === 3 && parts[2] === 'review') return { name: 'review', id: parts[1] };
+    if (parts.length === 3 && parts[2] === 'cover-letter') return { name: 'cover', id: parts[1] };
   }
   if (parts.length === 1 && parts[0] === 'import') return { name: 'import' };
+  if (parts.length === 1 && parts[0] === 'welcome') return { name: 'welcome' };
+  if (parts.length === 1 && parts[0] === 'start') return { name: 'start' };
   if (parts.length === 1 && parts[0] === 'applications') return { name: 'applications' };
   if (parts.length === 1 && parts[0] === 'settings') return { name: 'settings' };
   return { name: 'notFound', path };
@@ -27,6 +33,9 @@ export const paths = {
   dashboard: () => '#/',
   editor: (id: string) => `#/resume/${encodeURIComponent(id)}`,
   review: (id: string) => `#/resume/${encodeURIComponent(id)}/review`,
+  cover: (id: string) => `#/resume/${encodeURIComponent(id)}/cover-letter`,
+  welcome: () => '#/welcome',
+  start: () => '#/start',
   import: () => '#/import',
   applications: () => '#/applications',
   settings: () => '#/settings',

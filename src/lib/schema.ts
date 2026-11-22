@@ -140,13 +140,36 @@ export const FONT_SIZES = [10, 10.5, 11] as const;
 export const SPACINGS = ['compact', 'normal', 'relaxed'] as const;
 export const MARGINS = [0.6, 0.7, 0.8] as const;
 
+export const TEMPLATE_IDS = ['simple', 'classic', 'centered', 'serif'] as const;
+export type TemplateId = (typeof TEMPLATE_IDS)[number];
+
 export const layoutSchema = z.object({
+  template: z.enum(TEMPLATE_IDS).default('simple'),
   pageSize: z.enum(['A4', 'LETTER']),
   fontSize: z.union([z.literal(10), z.literal(10.5), z.literal(11)]),
   spacing: z.enum(SPACINGS),
   margin: z.union([z.literal(0.6), z.literal(0.7), z.literal(0.8)]),
 });
 export type Layout = z.infer<typeof layoutSchema>;
+
+export const coverLetterSchema = z.object({
+  company: z.string(),
+  hiringManager: z.string(),
+  role: z.string(),
+  body: z.string(),
+  closing: z.string(),
+  includeDate: z.boolean(),
+});
+export type CoverLetter = z.infer<typeof coverLetterSchema>;
+
+export const EMPTY_COVER_LETTER: CoverLetter = {
+  company: '',
+  hiringManager: '',
+  role: '',
+  body: '',
+  closing: 'Sincerely,',
+  includeDate: true,
+};
 
 export const variantSchema = z.object({
   id,
@@ -167,6 +190,7 @@ export const variantSchema = z.object({
   order: z.record(z.string(), z.array(orderEntrySchema)),
   layout: layoutSchema,
   jobDescription: z.string(),
+  coverLetter: coverLetterSchema.default(EMPTY_COVER_LETTER),
   fileName: z.string(),
   tailoredFrom: z.string().optional(),
   createdAt: z.string(),
@@ -192,6 +216,8 @@ export type Application = z.infer<typeof applicationSchema>;
 
 export const workspaceSchema = z.object({
   version: z.literal(1),
+  /** False only for a brand-new visitor who has not finished onboarding. */
+  onboarded: z.boolean().default(true),
   profile: profileSchema,
   variants: z.array(variantSchema).min(1),
   applications: z.array(applicationSchema),

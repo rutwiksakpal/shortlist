@@ -1,4 +1,5 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { OPEN_PANEL_EVENT } from './strength';
 import { ChevronDownIcon, EyeIcon, EyeOffIcon, TrashIcon } from '../../components/icons';
 import { Badge, IconButton } from '../../components/ui';
 import { cx, FOCUS_RING } from '../../components/cx';
@@ -21,8 +22,27 @@ export function Panel({
   const [open, setOpen] = useState(defaultOpen);
   const auto = useId();
   const bodyId = `${id ?? auto}-body`;
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!id) return;
+    const onOpen = (e: Event) => {
+      if ((e as CustomEvent<string>).detail !== id) return;
+      setOpen(true);
+      requestAnimationFrame(() => {
+        ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        ref.current?.querySelector<HTMLButtonElement>('h2 button')?.focus({ preventScroll: true });
+      });
+    };
+    window.addEventListener(OPEN_PANEL_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_PANEL_EVENT, onOpen);
+  }, [id]);
   return (
-    <section id={id} className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <section
+      ref={ref}
+      id={id}
+      style={{ scrollMarginTop: '8rem' }}
+      className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+    >
       <h2>
         <button
           type="button"

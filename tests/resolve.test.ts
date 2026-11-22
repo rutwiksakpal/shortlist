@@ -1,6 +1,7 @@
+import { fixtureProfile } from './fixtures';
 import { describe, expect, it } from 'vitest';
 import { resolveResume, resumePlainText } from '../src/lib/resolve';
-import { createVariant, emptyProfile, seedProfile } from '../src/lib/seed';
+import { createVariant, emptyProfile } from '../src/lib/seed';
 import { profileSchema } from '../src/lib/schema';
 
 function blankBits() {
@@ -54,15 +55,15 @@ describe('resolveResume - no empty output', () => {
   });
 
   it('hidden items are omitted', () => {
-    const p = seedProfile();
+    const p = fixtureProfile();
     const v = createVariant(p, { name: 'Web', preset: 'web' });
     v.order.sections = v.order.sections!.map((e) => (e.id === 'skills' ? { ...e, hidden: true } : e));
     const r = resolveResume(p, v);
     expect(r.sections.find((s) => s.key === 'skills')).toBeUndefined();
   });
 
-  it('seed profile has no invented history and passes the strict schema', () => {
-    const p = seedProfile();
+  it('fixture profile passes the strict schema', () => {
+    const p = fixtureProfile();
     expect(p.experience).toEqual([]);
     expect(p.projects).toEqual([]);
     expect(p.education).toEqual([]);
@@ -70,7 +71,7 @@ describe('resolveResume - no empty output', () => {
   });
 
   it('strict schema rejects excluded personal fields', () => {
-    const p = seedProfile() as unknown as { personal: Record<string, unknown> };
+    const p = fixtureProfile() as unknown as { personal: Record<string, unknown> };
     p.personal.dateOfBirth = '1999-01-01';
     expect(profileSchema.safeParse(p).success).toBe(false);
   });

@@ -5,11 +5,29 @@ import { seedWorkspace } from '../src/lib/seed';
 describe('storage', () => {
   beforeEach(() => localStorage.clear());
 
-  it('starts with seed data when empty', () => {
+  it('starts a new visitor with an empty profile and onboarding pending', () => {
     const r = loadWorkspace();
     expect(r.status).toBe('new');
-    expect(r.workspace.profile.personal.fullName).toBe('Rutwik Sakpal');
-    expect(r.workspace.variants.map((v) => v.name)).toEqual(['Web Developer', 'Software Developer']);
+    expect(r.workspace.onboarded).toBe(false);
+    expect(r.workspace.profile.personal.fullName).toBe('');
+    expect(r.workspace.variants).toHaveLength(1);
+  });
+
+  it('migrates older saved data (no template, cover letter or onboarded flag)', () => {
+    const ws = seedWorkspace() as unknown as Record<string, unknown> & {
+      variants: Array<Record<string, unknown> & { layout: Record<string, unknown> }>;
+    };
+    delete ws.onboarded;
+    for (const v of ws.variants) {
+      delete v.coverLetter;
+      delete v.layout.template;
+    }
+    localStorage.setItem(STORAGE_KEYS.workspace, JSON.stringify(ws));
+    const r = loadWorkspace();
+    expect(r.status).toBe('ok');
+    expect(r.workspace.onboarded).toBe(true);
+    expect(r.workspace.variants[0]!.layout.template).toBe('simple');
+    expect(r.workspace.variants[0]!.coverLetter.closing).toBe('Sincerely,');
   });
 
   it('recovers from corrupted storage without deleting the raw data', () => {
@@ -45,6 +63,8 @@ describe('store: undo, variants, snapshots', () => {
   it('undoes and redoes edits, coalescing rapid typing', async () => {
     const { useStore } = await import('../src/store/useStore');
     const s = useStore.getState();
+    s.editProfile('personal:headline', (p) => void (p.personal.headline = 'Web Developer'));
+    s.editProfile('other', (p) => void (p.personal.city = 'X'));
     s.editProfile('personal:headline', (p) => void (p.personal.headline = 'A'));
     s.editProfile('personal:headline', (p) => void (p.personal.headline = 'AB'));
     expect(useStore.getState().profile.personal.headline).toBe('AB');
@@ -56,6 +76,7 @@ describe('store: undo, variants, snapshots', () => {
 
   it('duplicates, tailors, renames and protects the last variant', async () => {
     const { useStore } = await import('../src/store/useStore');
+    useStore.getState().editProfile('n', (p) => void (p.personal.fullName = 'Rutwik Sakpal'));
     const first = useStore.getState().variants[0]!;
     const id = useStore.getState().duplicateVariant(first.id, 'Acme - Shopify Developer', { jobDescription: 'JD', tailoredFrom: first.id });
     const copy = useStore.getState().variants.find((v) => v.id === id)!;
@@ -74,7 +95,7 @@ describe('store: undo, variants, snapshots', () => {
     const snap = useStore.getState().snapshots[0]!;
     useStore.getState().editProfile('x', (p) => void (p.personal.fullName = 'Changed'));
     useStore.getState().restoreSnapshot(snap.id);
-    expect(useStore.getState().profile.personal.fullName).toBe('Rutwik Sakpal');
+    expect(useStore.getState().profile.personal.fullName).toBe('');
   });
 
   it('persists to localStorage', async () => {
@@ -82,5 +103,51 @@ describe('store: undo, variants, snapshots', () => {
     useStore.getState().editProfile('x', (p) => void (p.personal.city = 'Pune'));
     useStore.getState().persist();
     expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.workspace)!).profile.personal.city).toBe('Pune');
+  });
+});
+
+describe('onboarding', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.resetModules();
+  });
+
+  it('creates the profile and first resume from the wizard', async () => {
+    const { useStore } = await import('../src/store/useStore');
+    expect(useStore.getState().onboarded).toBe(false);
+    const id = useStore.getState().completeOnboarding({
+      fullName: 'Priya Shah',
+      headline: 'Frontend Developer',
+      email: 'p@example.com',
+      phone: '',
+      city: 'Pune',
+      country: 'India',
+      linkedin: '',
+      github: '',
+      portfolio: '',
+      preset: 'software',
+      roleName: 'Frontend Developer',
+    });
+    const st = useStore.getState();
+    expect(st.onboarded).toBe(true);
+    expect(st.profile.personal.fullName).toBe('Priya Shah');
+    expect(st.variants).toHaveLength(1);
+    expect(st.variants[0]!.id).toBe(id);
+    expect(st.variants[0]!.fileName).toBe('Priya_Shah_Frontend_Developer_Resume.pdf');
+  });
+
+  it('loads fictional sample data', async () => {
+    const { useStore } = await import('../src/store/useStore');
+    useStore.getState().loadSample();
+    expect(useStore.getState().profile.personal.fullName).toBe('Alex Morgan');
+    expect(useStore.getState().variants.length).toBe(2);
+  });
+
+  it('stops autosaving when another tab wrote newer data', async () => {
+    const { useStore } = await import('../src/store/useStore');
+    useStore.setState({ staleTab: true });
+    useStore.getState().editProfile('x', (p) => void (p.personal.city = 'Nowhere'));
+    useStore.getState().persist();
+    expect(localStorage.getItem(STORAGE_KEYS.workspace)).toBeNull();
   });
 });

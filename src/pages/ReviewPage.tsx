@@ -250,6 +250,9 @@ function Review({ id }: { id: string }) {
             <Button variant="primary" className="w-full" icon={<DownloadIcon size={16} />} disabled={!canDownload} onClick={download}>
               Download PDF
             </Button>
+            <Button className="w-full" onClick={() => navigate(paths.cover(variant.id))}>
+              {variant.coverLetter.body.trim() ? 'Open the matching cover letter' : 'Write a matching cover letter'}
+            </Button>
             {downloaded ? (
               <Notice
                 tone="success"

@@ -1,3 +1,36 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-tap-highlight-color: transparent;
+  }
+  ::selection {
+    background: #fde68a;
+    color: #0f172a;
+  }
+}
+
+@layer components {
+  /* Marker highlight used for matched keywords, like a recruiter's highlighter. */
+  .marker {
+    background-image: linear-gradient(transparent 55%, #fde68a 55%, #fde68a 92%, transparent 92%);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+  }
+  .dark .marker {
+    background-image: linear-gradient(transparent 55%, rgb(253 230 138 / 0.35) 55%, rgb(253 230 138 / 0.35) 92%, transparent 92%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -5,7 +5,27 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        sans: [
+          'Inter Variable',
+          'Inter',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
+          'Arial',
+          'sans-serif',
+        ],
+      },
+      colors: {
+        marker: '#FDE68A',
+      },
+      keyframes: {
+        highlight: { from: { backgroundSize: '0% 100%' }, to: { backgroundSize: '100% 100%' } },
+      },
+      animation: {
+        highlight: 'highlight 700ms ease-out both',
       },
     },
   },

@@ -177,3 +177,29 @@ export function verifyTextLayer(extracted: ExtractedPdf, resume: ResolvedResume)
 
   return { pass: checks.every((c) => c.pass), checks, pages: extracted.pages };
 }
+
+/** Text-layer check for a cover letter: name, email, greeting and every paragraph start. */
+export function verifyCoverLetterLayer(
+  extracted: ExtractedPdf,
+  letter: { name: string; contact: Array<{ kind: string; text: string }>; greeting: string; paragraphs: string[]; meta: { title: string } },
+): VerifyResult {
+  const full = norm(extracted.lines.join(' '));
+  const has = (t: string) => Boolean(t) && full.includes(norm(t));
+  const email = letter.contact.find((c) => c.kind === 'email')?.text ?? '';
+  const paraOk = letter.paragraphs.every((p) => has(p.split(' ').slice(0, 6).join(' ')));
+  const checks: VerifyCheck[] = [
+    { id: 'text', label: 'PDF contains selectable text', pass: extracted.lines.length > 0 },
+    { id: 'name', label: 'Name is in the text layer', pass: has(letter.name) },
+    { id: 'email', label: 'Email is in the text layer', pass: has(email) },
+    { id: 'greeting', label: 'Greeting present', pass: has(letter.greeting) },
+    { id: 'body', label: 'All paragraphs extracted', pass: letter.paragraphs.length > 0 && paraOk },
+    { id: 'images', label: 'No images in the PDF', pass: extracted.imageCount === 0 },
+    {
+      id: 'pages',
+      label: 'Fits on one page',
+      pass: extracted.pages === 1,
+      detail: `${extracted.pages} page${extracted.pages === 1 ? '' : 's'}`,
+    },
+  ];
+  return { pass: checks.every((c) => c.pass), checks, pages: extracted.pages };
+}

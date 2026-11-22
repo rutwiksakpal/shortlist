@@ -22,30 +22,28 @@ export function readyOf(b: PdfBuild): ReadyBuild | null {
 }
 
 /**
- * Renders the real PDF (debounced), opens it with pdf.js, extracts the text layer and verifies it.
- * The preview, page count, score and download all use this exact file.
+ * Generic debounced PDF build: renders a blob, opens it with pdf.js, extracts the text layer
+ * and runs a verifier. Preview, page count, score and download all use this exact file.
  */
-export function usePdfBuild(resume: ResolvedResume, layout: Layout, delay = 450): PdfBuild {
+export function usePdfDocument(
+  key: string,
+  render: () => Promise<Blob>,
+  verify: (extracted: ExtractedPdf) => VerifyResult,
+  delay = 450,
+): PdfBuild {
   const [build, setBuild] = useState<PdfBuild>({ status: 'building', previous: null });
   const closers = useRef<Array<() => Promise<void>>>([]);
   const generation = useRef(0);
-  const key = JSON.stringify([resume, layout]);
-  const keyRef = useRef(key);
-  keyRef.current = key;
-  const inputRef = useRef({ resume, layout });
-  inputRef.current = { resume, layout };
+  const fns = useRef({ render, verify });
+  fns.current = { render, verify };
 
   useEffect(() => {
     const gen = ++generation.current;
     setBuild((b) => (b.status === 'ready' && b.key === key ? b : { status: 'building', previous: readyOf(b) }));
     const timer = setTimeout(async () => {
       try {
-        const { resume: r, layout: l } = inputRef.current;
-        const [{ renderResumePdf }, { openPdf, imageOpCodes }] = await Promise.all([
-          import('../../lib/pdf/render'),
-          import('../../lib/pdf/pdfjs'),
-        ]);
-        const blob = await renderResumePdf(r, l);
+        const { openPdf, imageOpCodes } = await import('../../lib/pdf/pdfjs');
+        const blob = await fns.current.render();
         if (gen !== generation.current) return;
         const bytes = new Uint8Array(await blob.arrayBuffer());
         const opened = await openPdf(bytes);
@@ -54,15 +52,14 @@ export function usePdfBuild(resume: ResolvedResume, layout: Layout, delay = 450)
           return;
         }
         const extracted = await extractPdf(opened.doc, imageOpCodes());
-        const verify = verifyTextLayer(extracted, r);
+        const verified = fns.current.verify(extracted);
         if (gen !== generation.current) {
           void opened.close();
           return;
         }
         const old = closers.current.splice(0);
         closers.current.push(opened.close);
-        setBuild({ status: 'ready', blob, doc: opened.doc, pages: opened.doc.numPages, extracted, verify, key });
-        // Close older documents after the new one is on screen.
+        setBuild({ status: 'ready', blob, doc: opened.doc, pages: opened.doc.numPages, extracted, verify: verified, key });
         setTimeout(() => old.forEach((c) => void c()), 1500);
       } catch (e) {
         if (gen !== generation.current) return;
@@ -82,4 +79,15 @@ export function usePdfBuild(resume: ResolvedResume, layout: Layout, delay = 450)
   );
 
   return build;
+}
+
+/** Live build of a resume PDF. */
+export function usePdfBuild(resume: ResolvedResume, layout: Layout, delay = 450): PdfBuild {
+  const key = JSON.stringify([resume, layout]);
+  return usePdfDocument(
+    key,
+    async () => (await import('../../lib/pdf/render')).renderResumePdf(resume, layout),
+    (ex) => verifyTextLayer(ex, resume),
+    delay,
+  );
 }

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { type Application, type OrderEntry, type Profile, type Snapshot, type Variant, type Workspace } from '../lib/schema';
-import { createVariant, type NewVariantInput } from '../lib/seed';
-import { loadSnapshots, loadWorkspace, MAX_SNAPSHOTS, saveSnapshots, saveWorkspace, type LoadResult } from '../lib/storage';
+import { createVariant, emptyProfile, sampleWorkspace, type NewVariantInput } from '../lib/seed';
+import { loadSnapshots, loadWorkspace, MAX_SNAPSHOTS, saveSnapshots, saveWorkspace, STORAGE_KEYS, type LoadResult } from '../lib/storage';
 import { deepClone, defaultFileName, nowIso, uid } from '../lib/utils';
 import { orderedEntries } from '../lib/resolve';
 
@@ -21,7 +21,24 @@ const HISTORY_LIMIT = 100;
 const COALESCE_MS = 1000;
 const AUTO_SNAPSHOT_MS = 3 * 60 * 1000;
 
+export interface OnboardingInput {
+  fullName: string;
+  headline: string;
+  email: string;
+  phone: string;
+  city: string;
+  country: string;
+  linkedin: string;
+  github: string;
+  portfolio: string;
+  preset: 'web' | 'software' | 'custom';
+  roleName: string;
+}
+
 interface State extends Doc {
+  onboarded: boolean;
+  /** Another browser tab saved newer data; editing here could overwrite it. */
+  staleTab: boolean;
   applications: Application[];
   snapshots: Snapshot[];
   past: Doc[];
@@ -58,6 +75,11 @@ interface State extends Doc {
   takeSnapshot: (label: string) => void;
   restoreSnapshot: (id: string) => void;
   deleteSnapshot: (id: string) => void;
+
+  // onboarding
+  completeOnboarding: (input: OnboardingInput) => string;
+  loadSample: () => void;
+  markOnboarded: () => void;
 
   // persistence
   replaceWorkspace: (ws: Workspace, snapshots?: Snapshot[]) => void;
@@ -102,6 +124,8 @@ export const useStore = create<State>()((set, get) => {
   };
 
   return {
+    onboarded: init.load.workspace.onboarded,
+    staleTab: false,
     profile: init.load.workspace.profile,
     variants: init.load.workspace.variants,
     applications: init.load.workspace.applications,
@@ -246,8 +270,36 @@ export const useStore = create<State>()((set, get) => {
       saveSnapshots(next);
     },
 
+    completeOnboarding: (input) => {
+      const profile = emptyProfile();
+      Object.assign(profile.personal, {
+        fullName: input.fullName.trim(),
+        headline: input.headline.trim(),
+        email: input.email.trim(),
+        phone: input.phone.trim(),
+        city: input.city.trim(),
+        country: input.country.trim(),
+        linkedin: input.linkedin.trim(),
+        github: input.github.trim(),
+        portfolio: input.portfolio.trim(),
+      });
+      const variant = createVariant(profile, {
+        name: input.roleName.trim() || input.headline.trim() || 'My resume',
+        preset: input.preset,
+        headline: input.headline.trim(),
+      });
+      set({ profile, variants: [variant], onboarded: true, past: [], future: [], lastCommit: null, dirty: true });
+      return variant.id;
+    },
+    loadSample: () => {
+      const ws = sampleWorkspace();
+      set({ profile: ws.profile, variants: ws.variants, onboarded: true, past: [], future: [], lastCommit: null, dirty: true });
+    },
+    markOnboarded: () => set({ onboarded: true, dirty: true }),
+
     replaceWorkspace: (ws, snapshots) => {
       set({
+        onboarded: true,
         profile: ws.profile,
         variants: ws.variants,
         applications: ws.applications,
@@ -261,7 +313,7 @@ export const useStore = create<State>()((set, get) => {
     },
     persist: () => {
       const state = get();
-      if (!state.dirty) return;
+      if (!state.dirty || state.staleTab) return;
       set({ saveStatus: { state: 'saving' } });
       const result = saveWorkspace(state.workspace());
       if (!result.ok) {
@@ -277,8 +329,8 @@ export const useStore = create<State>()((set, get) => {
     },
     dismissRecovery: () => set({ recovery: null }),
     workspace: () => {
-      const { profile, variants, applications } = get();
-      return { version: 1, profile, variants, applications };
+      const { profile, variants, applications, onboarded } = get();
+      return { version: 1, onboarded, profile, variants, applications };
     },
   };
 });
@@ -289,7 +341,13 @@ export function startAutosave(delay = 600): () => void {
   const flush = () => useStore.getState().persist();
   const unsub = useStore.subscribe((state, prev) => {
     if (!state.dirty) return;
-    if (state.profile === prev.profile && state.variants === prev.variants && state.applications === prev.applications && prev.dirty)
+    if (
+      state.profile === prev.profile &&
+      state.variants === prev.variants &&
+      state.applications === prev.applications &&
+      state.onboarded === prev.onboarded &&
+      prev.dirty
+    )
       return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(flush, delay);
@@ -297,13 +355,19 @@ export function startAutosave(delay = 600): () => void {
   const onHide = () => {
     if (document.visibilityState === 'hidden') flush();
   };
+  // Another tab wrote newer data: stop autosaving here so it is not overwritten.
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === STORAGE_KEYS.workspace && e.newValue !== null) useStore.setState({ staleTab: true });
+  };
   window.addEventListener('beforeunload', flush);
+  window.addEventListener('storage', onStorage);
   document.addEventListener('visibilitychange', onHide);
   if (useStore.getState().dirty) timer = setTimeout(flush, delay);
   return () => {
     unsub();
     if (timer) clearTimeout(timer);
     window.removeEventListener('beforeunload', flush);
+    window.removeEventListener('storage', onStorage);
     document.removeEventListener('visibilitychange', onHide);
   };
 }

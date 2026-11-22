@@ -6,18 +6,21 @@ import { UiHost } from '../src/components/UiHost';
 import { useStore } from '../src/store/useStore';
 
 describe('Dashboard (React Testing Library)', () => {
-  it('lists seeded resumes, filters by search and creates a new resume', async () => {
+  it('lists resumes, filters by search and creates a new resume', async () => {
     const user = userEvent.setup();
+    useStore.getState().loadSample();
     render(
       <>
         <DashboardPage />
         <UiHost />
       </>,
     );
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/, Alex$/);
+    expect(screen.getByText('You are looking at sample data')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Web Developer' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Software Developer' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Full Stack Developer' })).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText('Search resumes'), 'software');
+    await user.type(screen.getByLabelText('Search resumes'), 'full stack');
     expect(screen.queryByRole('link', { name: 'Web Developer' })).not.toBeInTheDocument();
     await user.clear(screen.getByLabelText('Search resumes'));
 
